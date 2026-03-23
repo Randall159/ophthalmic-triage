@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from agents import SafetyAgent, RecipientAgent, AssessorAgent, InquirerAgent, empty_emr
+from backend.agents import SafetyAgent, RecipientAgent, AssessorAgent, InquirerAgent, empty_emr
 
 app = FastAPI(title="Ophthalmic Triage API", version="3.0.0")
 app.add_middleware(
@@ -136,7 +136,7 @@ async def change_model(data: dict):
 
 @app.get("/prompts/{agent_type}")
 async def get_prompt(agent_type: str):
-    from agents import (SAFETY_PRE_PROMPT, SAFETY_POST_PROMPT, RECIPIENT_PROMPT,
+    from backend.agents import (SAFETY_PRE_PROMPT, SAFETY_POST_PROMPT, RECIPIENT_PROMPT,
                         ASSESSOR_PROMPT, INQUIRER_AUTONOMOUS_PROMPT, INQUIRER_CLINICAL_PROMPT)
     prompts = {
         "safety_pre": SAFETY_PRE_PROMPT,
