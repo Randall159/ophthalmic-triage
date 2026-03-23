@@ -76,6 +76,10 @@ async function checkHealth() {
       const d = await res.json();
       statusDot.className = "status-dot online";
       statusLabel.textContent = `在线 · ${d.model?.split("/")[1] || ""}`;
+      // Sync dropdown with backend model
+      if (d.model) {
+        modelSelect.value = d.model;
+      }
     } else throw new Error();
   } catch {
     statusDot.className = "status-dot offline";
