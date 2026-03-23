@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>眼科分诊系统测试</title>
+  <style>
+    body { font-family: system-ui; max-width: 800px; margin: 40px auto; padding: 20px; }
+    .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>🏥 眼科分诊系统 - 功能测试</h1>
+
+  <div id="status"></div>
+
+  <h2>测试项目</h2>
+  <button onclick="testHealth()">1. 测试后端健康检查</button>
+  <button onclick="testChat()">2. 测试聊天API</button>
+  <button onclick="openFrontend()">3. 打开患者界面</button>
+
+  <div id="results" style="margin-top: 20px; white-space: pre-wrap; font-family: monospace; font-size: 12px;"></div>
+
+  <script>
+    const API = 'http://localhost:8000';
+
+    function log(msg, isError = false) {
+      const div = document.getElementById('results');
+      div.innerHTML += (isError ? '❌ ' : '✅ ') + msg + '\n\n';
+    }
+
+    async function testHealth() {
+      document.getElementById('results').innerHTML = '';
+      try {
+        const res = await fetch(`${API}/health`);
+        const data = await res.json();
+        log(`后端健康检查通过\n模型: ${data.model}\n状态: ${data.status}`);
+      } catch (e) {
+        log(`后端连接失败: ${e.message}`, true);
+      }
+    }
+
+    async function testChat() {
+      document.getElementById('results').innerHTML = '正在测试聊天功能...\n\n';
+      try {
+        const res = await fetch(`${API}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: '我的右眼很痛',
+            conversation_history: [],
+            current_emr: null
+          })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let stepCount = 0;
+
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, {stream: true});
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const event = JSON.parse(line.slice(6));
+
+            if (event.type === 'step_done') {
+              stepCount++;
+              log(`步骤 ${event.step}: ${event.agent} - ${event.status}`);
+            }
+
+            if (event.type === 'done') {
+              log(`\n最终回复: ${event.response}\n\nEMR状态: ${event.emr_complete ? '完整' : '不完整'}\n分诊等级: ${event.triage_level || '未评估'}`);
+            }
+          }
+        }
+
+        log(`\n✅ 聊天测试完成，共执行 ${stepCount} 个步骤`);
+      } catch (e) {
+        log(`聊天测试失败: ${e.message}`, true);
+      }
+    }
+
+    function openFrontend() {
+      window.open('frontend/index.html', '_blank');
+      log('已在新标签页打开患者界面');
+    }
+  </script>
+</body>
+</html>

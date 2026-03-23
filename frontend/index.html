@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>眼科智能分诊 · Ophthalmic Triage</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── Header ─────────────────────────────────── -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">👁️</div>
+        <div>
+          <div class="logo-title">眼科智能分诊系统</div>
+          <div class="logo-sub">AI Ophthalmic Telephone Triage · Powered by AAO Guidelines</div>
+        </div>
+      </div>
+      <div class="header-status">
+        <select id="modelSelect" style="margin-right: 12px; padding: 4px 8px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc;">
+          <option value="Qwen/Qwen3.5-4B">Qwen3.5-4B</option>
+          <option value="Qwen/Qwen3.5-9B">Qwen3.5-9B</option>
+          <option value="Qwen/Qwen3.5-27B">Qwen3.5-27B</option>
+          <option value="Qwen/Qwen3.5-122B-A10B">Qwen3.5-122B-A10B</option>
+          <option value="Qwen/Qwen3.5-397B-A17B" selected>Qwen3.5-397B-A17B</option>
+        </select>
+        <button id="clearBtn" style="margin-right: 12px; padding: 4px 12px; font-size: 12px; cursor: pointer; background: #ea4335; color: white; border: none; border-radius: 6px;">🔄 清空对话</button>
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusLabel">正在连接…</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main layout ────────────────────────────── -->
+  <main class="main-layout">
+
+    <!-- Chat column -->
+    <section class="chat-column">
+      <div class="chat-card">
+        <!-- Triage badge -->
+        <div class="triage-badge" id="triageBadge" style="display:none">
+          <span class="badge-label">当前分诊等级</span>
+          <span class="badge-value" id="triageLevel">—</span>
+        </div>
+
+        <!-- Messages -->
+        <div class="messages" id="messages">
+          <div class="msg assistant">
+            <div class="msg-avatar">🏥</div>
+            <div class="msg-bubble">
+              <p>Hello! I'm your ophthalmic triage assistant. Please describe your eye concern and I'll guide you to the right level of care.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Typing indicator -->
+        <div class="typing-row" id="typingRow" style="display:none">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <span>正在分析…</span>
+        </div>
+
+        <!-- Input -->
+        <div class="input-area">
+          <button id="voiceBtn" class="voice-btn" title="语音输入">🎤</button>
+          <textarea
+            id="userInput"
+            placeholder="Please describe your symptoms, e.g., My left eye is blurry..."
+            rows="2"
+          ></textarea>
+          <button id="sendBtn" onclick="sendMessage()">
+            <span id="sendIcon">Send</span>
+          </button>
+        </div>
+
+        <!-- Disclaimer -->
+        <p class="disclaimer">
+          ⚠️ 本系统仅供分诊参考，不替代医生诊断。紧急情况请立即拨打急救电话。
+        </p>
+        <p class="disclaimer" style="margin-top: -8px; font-size: 10px;">
+          💡 提示：按 Enter 发送，Shift+Enter 换行
+        </p>
+      </div>
+
+      <!-- Final Disposition Result -->
+      <div id="finalResult" class="final-result" style="display: none;">
+        <div class="result-header">📋 最终分诊结果</div>
+        <div class="result-content">
+          <div class="result-section">
+            <h4>分诊等级</h4>
+            <div id="finalTriageLevel"></div>
+          </div>
+          <div class="result-section">
+            <h4>完整病历 (EMR)</h4>
+            <pre id="finalEmr"></pre>
+          </div>
+          <div class="result-section">
+            <h4>分诊报告</h4>
+            <pre id="finalReport"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sidebar column -->
+    <aside class="sidebar-column">
+
+      <!-- EMR card -->
+      <div class="side-card">
+        <div class="side-card-title">
+          <span class="side-icon">📋</span> 电子病历 (EMR)
+        </div>
+        <pre id="emrContent" class="code-block">尚未收集信息…</pre>
+      </div>
+
+      <!-- Triage report card -->
+      <div class="side-card">
+        <div class="side-card-title">
+          <span class="side-icon">🔬</span> 分诊逻辑报告
+        </div>
+        <pre id="reportContent" class="code-block">等待评估…</pre>
+      </div>
+
+      <!-- Pipeline card -->
+      <div class="side-card">
+        <div class="side-card-title">
+          <span class="side-icon">⚙️</span> Agent 流水线状态
+        </div>
+        <div id="pipelineSteps" class="pipeline-steps">
+          <div class="pipeline-idle">等待首条消息…</div>
+        </div>
+      </div>
+
+      <!-- Agent Debug card -->
+      <div class="side-card">
+        <div class="side-card-title">
+          <span class="side-icon">🔍</span> Agent 调试日志
+        </div>
+        <div id="agentDebug" class="agent-debug">
+          <div class="debug-idle">等待Agent执行…</div>
+        </div>
+      </div>
+
+      <!-- Prompt Editor card -->
+      <div class="side-card">
+        <div class="side-card-title">
+          <span class="side-icon">✏️</span> Prompt 编辑器
+          <button id="togglePromptEditor" style="margin-left: auto; font-size: 11px; padding: 2px 8px; cursor: pointer;">展开</button>
+        </div>
+        <div id="promptEditor" class="prompt-editor" style="display: none;">
+          <div class="prompt-editor-content">
+            <select id="agentSelect" style="width: 100%; padding: 6px; margin-bottom: 8px; font-size: 12px;">
+              <option value="safety_pre">Safety Pre-Check</option>
+              <option value="safety_post">Safety Post-Check</option>
+              <option value="recipient">Recipient Agent</option>
+              <option value="assessor">Assessor Agent</option>
+              <option value="inquirer_auto">Inquirer (Autonomous)</option>
+              <option value="inquirer_clinical">Inquirer (Clinical)</option>
+            </select>
+            <textarea id="promptText" rows="10" style="width: 100%; font-family: monospace; font-size: 11px; padding: 8px;"></textarea>
+            <button id="savePrompt" style="margin-top: 8px; padding: 6px 12px; cursor: pointer;">保存 Prompt</button>
+            <div id="promptStatus" style="margin-top: 6px; font-size: 11px; color: #666;"></div>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
