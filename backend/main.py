@@ -11,7 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from backend.agents import SafetyAgent, RecipientAgent, AssessorAgent, InquirerAgent, empty_emr
+try:
+    from backend.agents import SafetyAgent, RecipientAgent, AssessorAgent, InquirerAgent, empty_emr
+except ModuleNotFoundError:
+    from agents import SafetyAgent, RecipientAgent, AssessorAgent, InquirerAgent, empty_emr
 
 app = FastAPI(title="Ophthalmic Triage API", version="3.0.0")
 app.add_middleware(
@@ -123,21 +126,31 @@ async def stream_pipeline(request: ChatRequest):
 
 @app.get("/health")
 async def health():
-    from backend.config import MODEL
+    try:
+        from backend.config import MODEL
+    except ModuleNotFoundError:
+        from config import MODEL
     return {"status": "ok", "model": MODEL}
 
 
 @app.post("/model")
 async def change_model(data: dict):
-    from backend import config
+    try:
+        from backend import config
+    except ModuleNotFoundError:
+        import config
     config.MODEL = data.get("model", "Qwen/Qwen3.5-4B")
     return {"status": "ok", "model": config.MODEL}
 
 
 @app.get("/prompts/{agent_type}")
 async def get_prompt(agent_type: str):
-    from backend.agents import (SAFETY_PRE_PROMPT, SAFETY_POST_PROMPT, RECIPIENT_PROMPT,
-                        ASSESSOR_PROMPT, INQUIRER_AUTONOMOUS_PROMPT, INQUIRER_CLINICAL_PROMPT)
+    try:
+        from backend.agents import (SAFETY_PRE_PROMPT, SAFETY_POST_PROMPT, RECIPIENT_PROMPT,
+                            ASSESSOR_PROMPT, INQUIRER_AUTONOMOUS_PROMPT, INQUIRER_CLINICAL_PROMPT)
+    except ModuleNotFoundError:
+        from agents import (SAFETY_PRE_PROMPT, SAFETY_POST_PROMPT, RECIPIENT_PROMPT,
+                            ASSESSOR_PROMPT, INQUIRER_AUTONOMOUS_PROMPT, INQUIRER_CLINICAL_PROMPT)
     prompts = {
         "safety_pre": SAFETY_PRE_PROMPT,
         "safety_post": SAFETY_POST_PROMPT,
