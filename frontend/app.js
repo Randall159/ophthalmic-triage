@@ -108,7 +108,9 @@ function initPipelineUI() {
 }
 
 function setStepRunning(step) {
+  console.log('setStepRunning called for step', step);
   const el = document.getElementById(`ps-${step}`);
+  console.log('Found element:', el);
   if (!el) return;
   el.className = "pipeline-step active";
   const s = document.getElementById(`pss-${step}`);
@@ -117,7 +119,9 @@ function setStepRunning(step) {
 }
 
 function setStepDone(step, status) {
+  console.log('setStepDone called for step', step, 'status', status);
   const el = document.getElementById(`ps-${step}`);
+  console.log('Found element:', el);
   if (!el) return;
   const isSafe = status === "SAFE" || status === "COMPLETE";
   el.className = `pipeline-step ${isSafe ? "done" : "unsafe"}`;
