@@ -47,16 +47,9 @@ async def stream_pipeline(request: ChatRequest):
     history = [{"role": m.role, "content": m.content} for m in request.conversation_history]
     current_emr = request.current_emr if request.current_emr else empty_emr()
 
-    # ── Step 1 & 2: Safety pre-check + Recipient (parallel) ──────────────────
+    # ── Step 1: Safety pre-check (out-of-band) ───────────────────────────────
     yield _sse({"type": "step_start", "step": 1, "agent": "Safety Monitor", "phase": "Pre-Check"})
-    yield _sse({"type": "step_start", "step": 2, "agent": "Recipient Agent", "phase": "EMR Update"})
-
-    # Run both in parallel
-    pre, updated_emr = await asyncio.gather(
-        asyncio.to_thread(safety.check, request.message),
-        asyncio.to_thread(recipient.update_emr, history, request.message, current_emr)
-    )
-
+    pre = await asyncio.to_thread(safety.check, request.message)
     yield _sse({"type": "step_done", "step": 1, "agent": "Safety Monitor",
                 "status": "SAFE" if pre["is_safe"] else "UNSAFE",
                 "detail": pre["raw"],
@@ -71,6 +64,9 @@ async def stream_pipeline(request: ChatRequest):
                     "safety_status": "UNSAFE (pre-check)"})
         return
 
+    # ── Step 2: Recipient — update EMR (incremental) ─────────────────────────
+    yield _sse({"type": "step_start", "step": 2, "agent": "Recipient Agent", "phase": "EMR Update"})
+    updated_emr = await asyncio.to_thread(recipient.update_emr, history, request.message, current_emr)
     emr_complete = recipient.emr_complete(updated_emr)
     emr_text = recipient.emr_to_text(updated_emr)
     yield _sse({"type": "step_done", "step": 2, "agent": "Recipient Agent",
