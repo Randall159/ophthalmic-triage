@@ -3,7 +3,7 @@
    Each agent step updates the sidebar in real-time.
 ───────────────────────────────────────────── */
 
-const API_BASE = "https://ophthalmic-triage-production.up.railway.app";
+const API_BASE = "http://localhost:8000";
 
 let conversationHistory = [];
 let currentEmr = null;
