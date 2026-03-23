@@ -240,15 +240,22 @@ async function sendMessage() {
       for (const chunk of lines) {
         if (!chunk.startsWith("data: ")) continue;
         let event;
-        try { event = JSON.parse(chunk.slice(6)); } catch { continue; }
+        try {
+          event = JSON.parse(chunk.slice(6));
+        } catch (e) {
+          console.error('Parse error:', e, chunk);
+          continue;
+        }
 
         console.log('Event:', event.type, event.step || '');
 
         if (event.type === "step_start") {
+          console.log('Calling setStepRunning for step', event.step);
           setStepRunning(event.step);
         }
 
         if (event.type === "step_done") {
+          console.log('Calling setStepDone for step', event.step, 'status', event.status);
           setStepDone(event.step, event.status);
           addAgentDebug(event.step, event.agent, event.detail || '—', event.input || null);
           if (event.step === 2) emrEl.textContent = event.detail || "—";
