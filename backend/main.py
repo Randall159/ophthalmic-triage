@@ -51,8 +51,10 @@ async def stream_pipeline(request: ChatRequest):
     current_emr = request.currentEmr if request.currentEmr else empty_emr()
 
     # ── Step 1: Safety pre-check (out-of-band) ───────────────────────────────
+    print(f"[STEP 1] Starting safety check for: {request.message}")
     yield _sse({"type": "step_start", "step": 1, "agent": "Safety Monitor", "phase": "Pre-Check"})
     pre = await asyncio.to_thread(safety.check, request.message)
+    print(f"[STEP 1] Safety check result: {pre}")
     yield _sse({"type": "step_done", "step": 1, "agent": "Safety Monitor",
                 "status": "SAFE" if pre["is_safe"] else "UNSAFE",
                 "detail": pre["raw"],
