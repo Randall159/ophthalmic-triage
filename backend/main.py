@@ -33,8 +33,8 @@ class MessageItem(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    conversation_history: List[MessageItem] = []
-    current_emr: Optional[dict] = None
+    history: List[MessageItem] = []
+    currentEmr: Optional[dict] = None
 
 
 def _sse(data: dict) -> str:
@@ -47,8 +47,8 @@ async def stream_pipeline(request: ChatRequest):
     assessor  = AssessorAgent()
     inquirer  = InquirerAgent()
 
-    history = [{"role": m.role, "content": m.content} for m in request.conversation_history]
-    current_emr = request.current_emr if request.current_emr else empty_emr()
+    history = [{"role": m.role, "content": m.content} for m in request.history]
+    current_emr = request.currentEmr if request.currentEmr else empty_emr()
 
     # ── Step 1: Safety pre-check (out-of-band) ───────────────────────────────
     yield _sse({"type": "step_start", "step": 1, "agent": "Safety Monitor", "phase": "Pre-Check"})

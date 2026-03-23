@@ -10,4 +10,4 @@ DASHSCOPE_API_KEY = os.environ.get(
 
 DASHSCOPE_BASE_URL = "https://api.siliconflow.cn/v1"
 
-MODEL = "Qwen/Qwen3.5-4B"
+MODEL = "Qwen/Qwen3-8B"

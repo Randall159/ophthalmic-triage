@@ -176,8 +176,8 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         message: text,
-        conversation_history: conversationHistory,
-        current_emr: currentEmr,
+        history: conversationHistory,
+        currentEmr: currentEmr,
       }),
     });
 
@@ -190,9 +190,50 @@ async function sendMessage() {
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
+      if (value) {
+        buffer += decoder.decode(value, { stream: true });
+      }
+
+      if (done) {
+        console.log('Stream done, processing remaining buffer');
+        // Process any remaining data in buffer
+        if (buffer.trim()) {
+          const lines = buffer.split("\n\n");
+          for (const chunk of lines) {
+            if (!chunk.startsWith("data: ")) continue;
+            let event;
+            try { event = JSON.parse(chunk.slice(6)); } catch { continue; }
+            console.log('Final event:', event.type);
+
+            if (event.type === "done") {
+              console.log('Got done event from buffer');
+              conversationHistory.push({ role: "user", content: text });
+              conversationHistory.push({ role: "assistant", content: event.response });
+              currentEmr = event.emr;
+
+              emrEl.textContent    = event.emr_text || "—";
+              reportEl.textContent = event.triage_report || "—";
+              updateTriageBadge(event.triage_level, event.disposition_ready);
+
+              const msgClass = triageClass(event.triage_level, event.disposition_ready);
+              appendMessage("assistant", event.response, msgClass);
+
+              speakText(event.response);
+
+              if (event.disposition_ready) {
+                showFinalResult(event.triage_level, event.emr_text, event.triage_report);
+              }
+
+              if (event.trigger_handoff) {
+                appendMessage("assistant", "🔄 正在转接人工护士…");
+              }
+            }
+          }
+        }
+        break;
+      }
+
       const lines = buffer.split("\n\n");
       buffer = lines.pop(); // keep incomplete chunk
 
@@ -201,21 +242,21 @@ async function sendMessage() {
         let event;
         try { event = JSON.parse(chunk.slice(6)); } catch { continue; }
 
+        console.log('Event:', event.type, event.step || '');
+
         if (event.type === "step_start") {
           setStepRunning(event.step);
         }
 
         if (event.type === "step_done") {
           setStepDone(event.step, event.status);
-          // Add to debug log with input
           addAgentDebug(event.step, event.agent, event.detail || '—', event.input || null);
-          // Update sidebar as each step finishes
           if (event.step === 2) emrEl.textContent = event.detail || "—";
           if (event.step === 3) reportEl.textContent = event.detail || "—";
         }
 
         if (event.type === "done") {
-          // Final result
+          console.log('Got done event');
           conversationHistory.push({ role: "user", content: text });
           conversationHistory.push({ role: "assistant", content: event.response });
           currentEmr = event.emr;
@@ -227,10 +268,8 @@ async function sendMessage() {
           const msgClass = triageClass(event.triage_level, event.disposition_ready);
           appendMessage("assistant", event.response, msgClass);
 
-          // Voice output
           speakText(event.response);
 
-          // Show final result if disposition ready
           if (event.disposition_ready) {
             showFinalResult(event.triage_level, event.emr_text, event.triage_report);
           }
@@ -238,6 +277,7 @@ async function sendMessage() {
           if (event.trigger_handoff) {
             appendMessage("assistant", "🔄 正在转接人工护士…");
           }
+          break;
         }
       }
     }
