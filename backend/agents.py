@@ -15,7 +15,7 @@ except ModuleNotFoundError:
     from config import DASHSCOPE_API_KEY, DASHSCOPE_BASE_URL
     import config
 
-client = OpenAI(api_key=DASHSCOPE_API_KEY, base_url=DASHSCOPE_BASE_URL)
+client = OpenAI(api_key=DASHSCOPE_API_KEY, base_url=DASHSCOPE_BASE_URL, timeout=30.0)
 
 EMR_FIELDS = [
     "Problem_Description", "Problem_Begin_Time", "Problem_Suddenness", "Problem_Progression",
@@ -61,16 +61,20 @@ def empty_emr() -> dict:
 
 
 def _call(system: str, user: str, max_tokens: int = 1200) -> str:
-    resp = client.chat.completions.create(
-        model=config.MODEL,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        max_tokens=max_tokens,
-        extra_body={"enable_thinking": False},
-    )
-    return (resp.choices[0].message.content or "").strip()
+    try:
+        resp = client.chat.completions.create(
+            model=config.MODEL,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            max_tokens=max_tokens,
+            extra_body={"enable_thinking": False},
+        )
+        return (resp.choices[0].message.content or "").strip()
+    except Exception as e:
+        print(f"API call error: {e}")
+        return f"[ERROR: {str(e)}]"
 
 
 # ── Safety Monitor ────────────────────────────────────────────────────────────
