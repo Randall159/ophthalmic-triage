@@ -123,13 +123,13 @@ async def stream_pipeline(request: ChatRequest):
 
 @app.get("/health")
 async def health():
-    from config import MODEL
+    from backend.config import MODEL
     return {"status": "ok", "model": MODEL}
 
 
 @app.post("/model")
 async def change_model(data: dict):
-    import config
+    from backend import config
     config.MODEL = data.get("model", "Qwen/Qwen3.5-4B")
     return {"status": "ok", "model": config.MODEL}
 

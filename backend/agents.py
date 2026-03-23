@@ -8,8 +8,8 @@ Architecture:
 """
 import json
 from openai import OpenAI
-from config import DASHSCOPE_API_KEY, DASHSCOPE_BASE_URL
-import config
+from backend.config import DASHSCOPE_API_KEY, DASHSCOPE_BASE_URL
+from backend import config
 
 client = OpenAI(api_key=DASHSCOPE_API_KEY, base_url=DASHSCOPE_BASE_URL)
 
