@@ -112,8 +112,12 @@ If NO triggers are met, output exactly: "[PASS]"
 
 
 class SafetyAgent:
+    def __init__(self, pre_prompt=None, post_prompt=None):
+        self.pre_prompt = pre_prompt or SAFETY_PRE_PROMPT
+        self.post_prompt = post_prompt or SAFETY_POST_PROMPT
+
     def check(self, patient_input: str) -> dict:
-        raw = _call(SAFETY_PRE_PROMPT, f"Patient input: {patient_input}", max_tokens=200)
+        raw = _call(self.pre_prompt, f"Patient input: {patient_input}", max_tokens=200)
         is_safe = "[PASS]" in raw
         override, trigger_handoff = "", False
         if not is_safe:
@@ -124,7 +128,7 @@ class SafetyAgent:
         return {"is_safe": is_safe, "raw": raw, "override_message": override, "trigger_handoff": trigger_handoff}
 
     def post_check(self, nurse_reply: str) -> dict:
-        raw = _call(SAFETY_POST_PROMPT, f"Nurse reply: {nurse_reply}", max_tokens=200)
+        raw = _call(self.post_prompt, f"Nurse reply: {nurse_reply}", max_tokens=200)
         is_safe = "[PASS]" in raw
         override = ""
         if not is_safe:
@@ -180,6 +184,9 @@ You are the "Recipient Agent" in an asynchronous Ophthalmic Triage system. Your 
 
 
 class RecipientAgent:
+    def __init__(self, prompt=None):
+        self.prompt = prompt or RECIPIENT_PROMPT
+
     def update_emr(self, history: list, new_message: str, current_emr: dict) -> dict:
         missing = [f for f in EMR_FIELDS if current_emr.get(f) == "[NOT STATED]"]
         history_text = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in history)
@@ -204,7 +211,7 @@ class RecipientAgent:
             "Look at the conversation history to understand what question was asked, then map the answer correctly.\n"
             "Output ONLY the JSON with fields mentioned by patient."
         )
-        raw = _call(RECIPIENT_PROMPT, user_prompt, max_tokens=1000)
+        raw = _call(self.prompt, user_prompt, max_tokens=1000)
         try:
             start, end = raw.find("{"), raw.rfind("}") + 1
             updated = json.loads(raw[start:end])
@@ -328,6 +335,9 @@ CRITICAL: Only set "Ready for Disposition: Yes" when:
 
 
 class AssessorAgent:
+    def __init__(self, prompt=None):
+        self.prompt = prompt or ASSESSOR_PROMPT
+
     def evaluate(self, history: list, emr: dict, emr_text: str, emr_complete: bool) -> dict:
         if not emr_complete:
             return {
@@ -343,7 +353,7 @@ class AssessorAgent:
 
         history_text = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in history)
         user_prompt = f"EMR_BASIC_STATUS: COMPLETE\nAll fields filled: {all_filled}\n\nComplete conversation history:\n{history_text}\n\nEMR Summary:\n{emr_text}"
-        raw = _call(ASSESSOR_PROMPT, user_prompt, max_tokens=1000)
+        raw = _call(self.prompt, user_prompt, max_tokens=1000)
 
         triage_level = "INCOMPLETE"
         for line in raw.splitlines():
@@ -422,6 +432,10 @@ Gap Analysis (questions to ask): {gap_analysis}"""
 
 
 class InquirerAgent:
+    def __init__(self, auto_prompt=None, clinical_prompt=None):
+        self.auto_prompt = auto_prompt or INQUIRER_AUTONOMOUS_PROMPT
+        self.clinical_prompt = clinical_prompt or INQUIRER_CLINICAL_PROMPT
+
     def generate_response(self, history: list, new_message: str,
                           emr: dict, emr_text: str,
                           emr_complete: bool, gap_analysis: str,
@@ -443,9 +457,9 @@ class InquirerAgent:
         if not emr_complete:
             missing = [EMR_LABELS.get(f, f) for f in CRITICAL_FIELDS
                        if emr.get(f, "[NOT STATED]") == "[NOT STATED]"]
-            system = INQUIRER_AUTONOMOUS_PROMPT.format(missing_fields=", ".join(missing))
+            system = self.auto_prompt.format(missing_fields=", ".join(missing))
         else:
-            system = INQUIRER_CLINICAL_PROMPT.format(gap_analysis=gap_analysis or "Ask about symptom details.")
+            system = self.clinical_prompt.format(gap_analysis=gap_analysis or "Ask about symptom details.")
 
         user_prompt = (
             f"Conversation so far:\n{history_text}\n\n"

@@ -25,6 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# In-memory prompt overrides (session-specific)
+prompt_overrides = {}
+
 
 class MessageItem(BaseModel):
     role: str
@@ -42,10 +45,27 @@ def _sse(data: dict) -> str:
 
 
 async def stream_pipeline(request: ChatRequest):
-    safety    = SafetyAgent()
-    recipient = RecipientAgent()
-    assessor  = AssessorAgent()
-    inquirer  = InquirerAgent()
+    try:
+        from backend.agents import (SafetyAgent, RecipientAgent, AssessorAgent, InquirerAgent, empty_emr,
+                                    SAFETY_PRE_PROMPT, SAFETY_POST_PROMPT, RECIPIENT_PROMPT,
+                                    ASSESSOR_PROMPT, INQUIRER_AUTONOMOUS_PROMPT, INQUIRER_CLINICAL_PROMPT)
+    except ModuleNotFoundError:
+        from agents import (SafetyAgent, RecipientAgent, AssessorAgent, InquirerAgent, empty_emr,
+                            SAFETY_PRE_PROMPT, SAFETY_POST_PROMPT, RECIPIENT_PROMPT,
+                            ASSESSOR_PROMPT, INQUIRER_AUTONOMOUS_PROMPT, INQUIRER_CLINICAL_PROMPT)
+
+    # Use overridden prompts if available
+    safety_pre = prompt_overrides.get("safety_pre", SAFETY_PRE_PROMPT)
+    safety_post = prompt_overrides.get("safety_post", SAFETY_POST_PROMPT)
+    recipient_prompt = prompt_overrides.get("recipient", RECIPIENT_PROMPT)
+    assessor_prompt = prompt_overrides.get("assessor", ASSESSOR_PROMPT)
+    inquirer_auto = prompt_overrides.get("inquirer_auto", INQUIRER_AUTONOMOUS_PROMPT)
+    inquirer_clinical = prompt_overrides.get("inquirer_clinical", INQUIRER_CLINICAL_PROMPT)
+
+    safety    = SafetyAgent(safety_pre, safety_post)
+    recipient = RecipientAgent(recipient_prompt)
+    assessor  = AssessorAgent(assessor_prompt)
+    inquirer  = InquirerAgent(inquirer_auto, inquirer_clinical)
 
     history = [{"role": m.role, "content": m.content} for m in request.history]
     current_emr = request.currentEmr if request.currentEmr else empty_emr()
@@ -166,9 +186,8 @@ async def get_prompt(agent_type: str):
 
 @app.post("/prompts/{agent_type}")
 async def save_prompt(agent_type: str, data: dict):
-    # Note: This saves to memory only, not to file
-    # For persistent changes, edit agents.py directly
-    return {"status": "ok", "message": "Prompt updated in memory (restart required for persistence)"}
+    prompt_overrides[agent_type] = data.get("prompt", "")
+    return {"status": "ok", "message": "Prompt updated (session only, resets on refresh)"}
 
 
 @app.post("/chat")
