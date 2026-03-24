@@ -23,7 +23,7 @@ EMR_FIELDS = [
     "Flashes", "Floaters", "Peripheral_Shadows", "Vision_Change_Type",
     "Eye_Pain", "Pain_Details", "Pain_Progression", "Nausea_Vomiting", "Other_Pain",
     "Eyes_Red", "Discharge", "Eyelids_Stick", "Burn_Injury", "Injury_Details",
-    "Wear_Contact_Lens", "Other_Symptoms",
+    "Wear_Contact_Lens", "Pupil", "Eyelid",
 ]
 CRITICAL_FIELDS = ["Problem_Description", "Affects_Eye", "Problem_Begin_Time", "Recent_Surgery", "Burn_Injury"]
 
@@ -52,7 +52,8 @@ EMR_LABELS = {
     "Burn_Injury": "烧伤/外伤 / Burn/Injury",
     "Injury_Details": "外伤详情 / Injury Details",
     "Wear_Contact_Lens": "隐形眼镜 / Contact Lens",
-    "Other_Symptoms": "其他症状 / Other Symptoms",
+    "Pupil": "瞳孔 / Pupil",
+    "Eyelid": "眼睑 / Eyelid",
 }
 
 
@@ -190,6 +191,8 @@ You are the "Recipient Agent" in an asynchronous Ophthalmic Triage system. Your 
 - "Burn_Injury" ("Yes" / "No")
 - "Injury_Details" (String)
 - "Wear_Contact_Lens" ("Yes" / "No")
+- "Pupil" (String: size, reactivity, abnormalities)
+- "Eyelid" (String: swelling, drooping, abnormalities)
 
 # Example Output:
 {"Affects_Eye": "Right", "Eye_Pain": "Yes", "Problem_Begin_Time": "This morning"}"""
@@ -337,7 +340,7 @@ vision_loss_change
 # Output Format (If Active)
 **1. Highest Potential Triage Level**: [ROUTINE / URGENT / EMERGENT]
 **2. Gap Analysis**: [Instruct the Inquirer what specific clinical symptom to ask about next to rule out emergent risks based on the AAO rules. E.g., "Patient has eye pain. Need to ask if there is nausea to rule out acute glaucoma."]
-**3. Ready for Disposition**: [Yes / No]
+**3. Ready for Disposition**: [Yes / No] (MUST be exactly "Yes" or "No", no other text)
 
 CRITICAL: Only set "Ready for Disposition: Yes" when:
 1. ALL EMR fields have been filled (no [NOT STATED] remaining)
