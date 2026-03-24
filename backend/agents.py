@@ -339,7 +339,7 @@ vision_loss_change
 
 # Output Format (If Active)
 **1. Highest Potential Triage Level**: [ROUTINE / URGENT / EMERGENT]
-**2. Gap Analysis**: [PRIORITY 1: First ask AAO guideline questions to rule out emergent risks (e.g., "Patient has eye pain. Need to ask if there is nausea to rule out acute glaucoma."). PRIORITY 2: Only after all AAO questions are answered, then ask about missing EMR fields (e.g., "Missing EMR: Pupil, Eyelid.")]
+**2. Gap Analysis**: [PRIORITY 1: Instruct the Inquirer what specific clinical symptom to ask about next to rule out emergent risks based on the AAO rules (e.g., "Patient has eye pain. Instruct nurse to ask if there is nausea to rule out acute glaucoma."). PRIORITY 2: Only after all AAO questions are answered, then instruct about missing EMR fields (e.g., "Missing EMR: Pupil, Eyelid. Instruct nurse to ask about these.")]
 **3. Ready for Disposition**: [Yes / No] (MUST be exactly "Yes" or "No", no other text)
 
 CRITICAL: Only set "Ready for Disposition: Yes" when:
